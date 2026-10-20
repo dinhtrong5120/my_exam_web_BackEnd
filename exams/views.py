@@ -147,9 +147,12 @@ def exams(request):
         return error('Thời gian làm bài không hợp lệ.')
     if not 1 <= duration <= 300:
         return error('Thời gian làm bài phải từ 1 đến 300 phút.')
+    category = str(request.data.get('category', 'TOEIC') or '').strip()
+    if not category or len(category) > 60:
+        return error('Danh mục cần có từ 1 đến 60 ký tự.')
     exam = Exam.objects.create(owner=request.user, title=title[:200],
         description=str(request.data.get('description', '')),
-        category=str(request.data.get('category') or 'TOEIC')[:60], duration_minutes=duration)
+        category=category, duration_minutes=duration)
     return Response(exam_data(exam, True), status=201)
 
 @api_view(['GET', 'PATCH', 'DELETE'])
@@ -182,10 +185,13 @@ def exam_detail(request, exam_id):
     title = str(request.data.get('title', exam.title)).strip()
     if not title:
         return error('Vui lòng nhập tên bài thi.')
+    category = str(request.data.get('category', exam.category) or '').strip()
+    if not category or len(category) > 60:
+        return error('Danh mục cần có từ 1 đến 60 ký tự.')
     with transaction.atomic():
         exam.title = title[:200]
         exam.description = str(request.data.get('description', exam.description))
-        exam.category = str(request.data.get('category', exam.category))[:60]
+        exam.category = category
         exam.duration_minutes = duration
         exam.save()
         if items is not None:

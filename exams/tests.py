@@ -49,6 +49,25 @@ class ExamFlowTests(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(exam.questions.get().prompt, 'Question')
 
+    def test_can_create_and_change_to_a_custom_category(self):
+        created = self.client.post('/api/exams/', {
+            'title': 'Cloud practice', 'category': 'AWS'
+        }, format='json')
+        self.assertEqual(created.status_code, 201)
+        self.assertEqual(created.data['category'], 'AWS')
+        changed = self.client.patch(f"/api/exams/{created.data['id']}/", {
+            'category': 'Cloud Computing'
+        }, format='json')
+        self.assertEqual(changed.status_code, 200)
+        self.assertEqual(changed.data['category'], 'Cloud Computing')
+        listed = self.client.get('/api/exams/?mine=1')
+        self.assertEqual(listed.data[0]['category'], 'Cloud Computing')
+        invalid = self.client.patch(f"/api/exams/{created.data['id']}/", {
+            'category': '   '
+        }, format='json')
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(Exam.objects.get(pk=created.data['id']).category, 'Cloud Computing')
+
     def test_import_template_columns(self):
         exam = Exam.objects.create(owner=self.owner, title='Import')
         book = Workbook()
